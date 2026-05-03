@@ -1,17 +1,11 @@
 from flask import Flask, request, Response, send_from_directory, jsonify
 from flask_cors import CORS
-import yt_dlp, tempfile, os, logging, subprocess, sys
+import yt_dlp, tempfile, os, logging
 
 app = Flask(__name__)
 app.static_folder = None
 CORS(app)
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
-
-# Auto-update yt-dlp on startup
-try:
-    subprocess.run([sys.executable, '-m', 'yt_dlp', '-U'], 
-                   capture_output=True, timeout=30)
-except: pass
 
 @app.route('/')
 def index():
@@ -25,21 +19,34 @@ def css():
 def js():
     return send_from_directory('.', 'clean_script.js')
 
+def write_cookies():
+    """Write cookies from environment variable to a temp file"""
+    cookies_content = os.environ.get('YOUTUBE_COOKIES', '')
+    if not cookies_content:
+        return None
+    # Fix the cookie format - remove markdown links if any
+    lines = []
+    for line in cookies_content.split('\n'):
+        # Clean up any markdown formatting
+        line = line.replace('[youtube.com](http://youtube.com)', '.youtube.com')
+        line = line.replace('[18.YT](http://18.YT)', '18.YT')
+        lines.append(line)
+    cookies_content = '\n'.join(lines)
+    tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False)
+    tmp.write(cookies_content)
+    tmp.close()
+    return tmp.name
+
 def get_ydl_opts(extra={}):
     opts = {
         'quiet': True,
         'no_warnings': True,
-        'extractor_args': {
-            'youtube': {
-                'player_client': ['ios', 'android'],
-                'player_skip': ['webpage', 'configs'],
-            }
-        },
-        'http_headers': {
-            'User-Agent': 'com.google.ios.youtube/19.29.1 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X;)',
-        },
         'socket_timeout': 30,
     }
+    # Add cookies if available
+    cookie_file = write_cookies()
+    if cookie_file:
+        opts['cookiefile'] = cookie_file
     opts.update(extra)
     return opts
 
