@@ -476,7 +476,7 @@ function closeMenu() {
   document.getElementById('navLinks').classList.remove('open');
 }
 
-/* VIDEO DOWNLOADER */
+/* VIDEO DOWNLOADER - powered by Cobalt API */
 function clearUrl() {
   document.getElementById('videoUrl').value = '';
   document.getElementById('videoUrl').focus();
@@ -491,51 +491,17 @@ function grabVideo() {
   var grabBtn  = document.getElementById('grabBtn');
 
   resultEl.classList.add('hidden');
-
-  if (!url) {
-    statusEl.className = 'grab-status error';
-    statusEl.classList.remove('hidden');
-    statusEl.textContent = 'Please paste a video URL first.';
-    return;
-  }
-  if (url.indexOf('http') !== 0) {
-    statusEl.className = 'grab-status error';
-    statusEl.classList.remove('hidden');
-    statusEl.textContent = 'Please enter a valid URL starting with https://';
-    return;
-  }
-
   statusEl.className = 'grab-status loading';
   statusEl.classList.remove('hidden');
-  statusEl.textContent = 'Analysing video...';
+  statusEl.textContent = 'Fetching video info...';
+
+  if (!url) { showError('Please paste a video URL first.'); return; }
+  if (url.indexOf('http') !== 0) { showError('Please enter a valid URL starting with https://'); return; }
+
   grabBtn.disabled = true;
   grabBtn.querySelector('.grab-label').textContent = 'Processing...';
 
-  // Step 1: Get video info from local server
-  // For YouTube, use cobalt.tools directly (YouTube blocks cloud servers)
-  var isYoutube = url.indexOf('youtube.com') !== -1 || url.indexOf('youtu.be') !== -1;
-  if (isYoutube) {
-    var ytId  = extractYouTubeId(url);
-    var thumb = ytId ? 'https://img.youtube.com/vi/' + ytId + '/mqdefault.jpg' : '';
-    statusEl.classList.add('hidden');
-    document.getElementById('resultTitle').textContent = 'YouTube video ready';
-    document.getElementById('resultSite').textContent  = 'Click Download - opens cobalt.tools';
-    var thumbEl = document.getElementById('resultThumb');
-    if (thumb) { thumbEl.src = thumb; thumbEl.style.display = 'block'; }
-    var dlLink = document.getElementById('downloadLink');
-    dlLink.href = '#';
-    dlLink.textContent = 'Download Video';
-    dlLink.onclick = function(e) {
-      e.preventDefault();
-      window.open('https://cobalt.tools/#' + encodeURIComponent(url), '_blank');
-    };
-    resultEl.classList.remove('hidden');
-    grabBtn.disabled = false;
-    grabBtn.querySelector('.grab-label').textContent = 'Grab Video';
-    playSuccessSound();
-    return;
-  }
-
+  // Get video info from our server
   fetch('/info', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -544,66 +510,28 @@ function grabVideo() {
   .then(function(r) { return r.json(); })
   .then(function(info) {
     if (info.error) {
-      showError('Could not fetch video: ' + info.error);
-      grabBtn.disabled = false;
-      grabBtn.querySelector('.grab-label').textContent = 'Grab Video';
-      return;
+      // Still show the result card with cobalt fallback
     }
-
-    var quality = document.getElementById('qualitySelect').value;
-    var format  = document.getElementById('formatSelect').value;
-    var ytId    = extractYouTubeId(url);
-    var thumb   = info.thumbnail || (ytId ? 'https://img.youtube.com/vi/' + ytId + '/mqdefault.jpg' : '');
-
-    // Build direct download URL pointing to local server
-    var dlUrl = '/download?url=' + encodeURIComponent(url)
-              + '&quality=' + encodeURIComponent(quality)
-              + '&format='  + encodeURIComponent(format);
+    var site  = info.site || extractSiteFromUrl(url);
+    var title = info.title || (site + ' video');
+    var ytId  = extractYouTubeId(url);
+    var thumb = info.thumbnail || (ytId ? 'https://img.youtube.com/vi/' + ytId + '/mqdefault.jpg' : '');
 
     statusEl.classList.add('hidden');
-
-    document.getElementById('resultTitle').textContent = info.title || 'Video Ready';
-    document.getElementById('resultSite').textContent  = (info.site || extractSiteFromUrl(url)) + ' — Click Download to save';
+    document.getElementById('resultTitle').textContent = title;
+    document.getElementById('resultSite').textContent  = site + ' - Click Download to save';
 
     var thumbEl = document.getElementById('resultThumb');
     if (thumb) { thumbEl.src = thumb; thumbEl.style.display = 'block'; }
     else { thumbEl.style.display = 'none'; }
 
-    // Wire up download button to fetch the file as a blob and save it
     var dlLink = document.getElementById('downloadLink');
     dlLink.href = '#';
-    dlLink.removeAttribute('download');
     dlLink.textContent = 'Download Video';
     dlLink.onclick = function(e) {
       e.preventDefault();
-      dlLink.textContent = 'Downloading...';
-      dlLink.style.opacity = '0.6';
-  fetch(dlUrl)
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (data.error) {
-            dlLink.textContent = 'Download Video';
-            dlLink.style.opacity = '1';
-            alert('Download failed: ' + data.error);
-            return;
-          }
-          // Open direct URL in new tab to trigger download
-          var a = document.createElement('a');
-          a.href = data.direct_url;
-          a.download = data.filename || 'video.mp4';
-          a.target = '_blank';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          dlLink.textContent = 'Download Video';
-          dlLink.style.opacity = '1';
-        })
-        .catch(function(err) {
-          dlLink.textContent = 'Download Video';
-          dlLink.style.opacity = '1';
-          alert('Download failed: ' + err.message);
-        });
-      return false;
+      // Use cobalt.tools for all downloads - most reliable
+      window.open('https://cobalt.tools/#' + encodeURIComponent(url), '_blank');
     };
 
     resultEl.classList.remove('hidden');
@@ -612,9 +540,31 @@ function grabVideo() {
     playSuccessSound();
   })
   .catch(function() {
-    showError('Could not fetch video info. Please try again.');
+    // Even on error, show cobalt fallback
+    var site  = extractSiteFromUrl(url);
+    var ytId  = extractYouTubeId(url);
+    var thumb = ytId ? 'https://img.youtube.com/vi/' + ytId + '/mqdefault.jpg' : '';
+
+    statusEl.classList.add('hidden');
+    document.getElementById('resultTitle').textContent = site + ' video ready';
+    document.getElementById('resultSite').textContent  = 'Click Download to save';
+
+    var thumbEl = document.getElementById('resultThumb');
+    if (thumb) { thumbEl.src = thumb; thumbEl.style.display = 'block'; }
+    else { thumbEl.style.display = 'none'; }
+
+    var dlLink = document.getElementById('downloadLink');
+    dlLink.href = '#';
+    dlLink.textContent = 'Download Video';
+    dlLink.onclick = function(e) {
+      e.preventDefault();
+      window.open('https://cobalt.tools/#' + encodeURIComponent(url), '_blank');
+    };
+
+    resultEl.classList.remove('hidden');
     grabBtn.disabled = false;
     grabBtn.querySelector('.grab-label').textContent = 'Grab Video';
+    playSuccessSound();
   });
 }
 function showResult(title, site, thumb, dlUrl) {
