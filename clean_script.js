@@ -174,7 +174,7 @@ function grabVideo() {
     var thumb   = info.thumbnail || (ytId ? 'https://img.youtube.com/vi/' + ytId + '/mqdefault.jpg' : '');
 
     // Build direct download URL pointing to local server
-    var dlUrl = 'http://localhost:5000/download?url=' + encodeURIComponent(url)
+    var dlUrl = '/download?url=' + encodeURIComponent(url)
               + '&quality=' + encodeURIComponent(quality)
               + '&format='  + encodeURIComponent(format);
 
@@ -235,7 +235,7 @@ function grabVideo() {
     playSuccessSound();
   })
   .catch(function() {
-    showError('Cannot connect to Grabix server. Make sure the launcher is running!');
+    showError('Could not fetch video info. Please try again.');
     grabBtn.disabled = false;
     grabBtn.querySelector('.grab-label').textContent = 'Grab Video';
   });
