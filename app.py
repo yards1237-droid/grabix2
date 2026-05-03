@@ -1,4 +1,4 @@
-from flask import Flask, request, Response, send_from_directory, jsonify
+from flask import Flask, request, Response, send_from_directory, jsonify, redirect
 from flask_cors import CORS
 import yt_dlp, tempfile, os, logging
 
@@ -20,14 +20,11 @@ def js():
     return send_from_directory('.', 'clean_script.js')
 
 def write_cookies():
-    """Write cookies from environment variable to a temp file"""
     cookies_content = os.environ.get('YOUTUBE_COOKIES', '')
     if not cookies_content:
         return None
-    # Fix the cookie format - remove markdown links if any
     lines = []
     for line in cookies_content.split('\n'):
-        # Clean up any markdown formatting
         line = line.replace('[youtube.com](http://youtube.com)', '.youtube.com')
         line = line.replace('[18.YT](http://18.YT)', '18.YT')
         lines.append(line)
@@ -43,7 +40,6 @@ def get_ydl_opts(extra={}):
         'no_warnings': True,
         'socket_timeout': 30,
     }
-    # Add cookies if available
     cookie_file = write_cookies()
     if cookie_file:
         opts['cookiefile'] = cookie_file
@@ -77,42 +73,46 @@ def download():
 
     if not url: return jsonify({'error':'No URL'}), 400
 
-    tmpdir = tempfile.mkdtemp()
-    out = os.path.join(tmpdir, '%(title)s.%(ext)s')
-
-    if fmt == 'mp3':
-        extra = {
-            'format': 'bestaudio/best',
-            'outtmpl': out,
-            'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3'}],
-        }
-    else:
-        fs = 'best[ext=mp4]/best' if quality in ('max','auto') else f'best[height<={quality}][ext=mp4]/best[height<={quality}]'
-        extra = {'format': fs, 'outtmpl': out}
-
     try:
-        opts = get_ydl_opts(extra)
+        # Get the direct video URL and redirect to it
+        # This avoids downloading through the server
+        if fmt == 'mp3':
+            fmt_str = 'bestaudio/best'
+        else:
+            fmt_str = 'best[ext=mp4]/best' if quality in ('max','auto') else f'best[height<={quality}][ext=mp4]/best[height<={quality}]'
+
+        opts = get_ydl_opts({
+            'skip_download': True,
+            'format': fmt_str,
+        })
+
         with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(url, download=True)
+            info = ydl.extract_info(url, download=False)
+            
+            # Get the direct URL
+            if 'url' in info:
+                direct_url = info['url']
+            elif 'formats' in info:
+                formats = info['formats']
+                # Pick best mp4 format
+                mp4_formats = [f for f in formats if f.get('ext') == 'mp4' and f.get('url')]
+                if mp4_formats:
+                    direct_url = mp4_formats[-1]['url']
+                else:
+                    direct_url = formats[-1]['url']
+            else:
+                return jsonify({'error': 'No download URL found'}), 400
+
             title = info.get('title', 'video')
+            safe = ''.join(c for c in title if c.isalnum() or c in ' -_').strip()[:60]
 
-        files = os.listdir(tmpdir)
-        if not files: return jsonify({'error': 'No file produced'}), 500
-        fp = os.path.join(tmpdir, files[0])
-        ext = files[0].split('.')[-1]
+            # Return the direct URL to the client
+            return jsonify({
+                'direct_url': direct_url,
+                'filename': safe + '.mp4',
+                'title': title
+            })
 
-        def gen():
-            with open(fp, 'rb') as f:
-                while True:
-                    c = f.read(65536)
-                    if not c: break
-                    yield c
-            try: os.remove(fp); os.rmdir(tmpdir)
-            except: pass
-
-        safe = ''.join(c for c in title if c.isalnum() or c in ' -_').strip()[:60]
-        return Response(gen(), mimetype='application/octet-stream',
-                        headers={'Content-Disposition': f'attachment; filename="{safe}.{ext}"'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
