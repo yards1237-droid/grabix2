@@ -1,4 +1,4 @@
-from flask import Flask, request, Response, send_from_directory, jsonify, redirect
+from flask import Flask, request, Response, send_from_directory, jsonify
 from flask_cors import CORS
 import yt_dlp, tempfile, os, logging
 
@@ -23,13 +23,8 @@ def write_cookies():
     cookies_content = os.environ.get('YOUTUBE_COOKIES', '')
     if not cookies_content:
         return None
-    lines = []
-    for line in cookies_content.split('\n'):
-        line = line.replace('[youtube.com](http://youtube.com)', '.youtube.com')
-        line = line.replace('[18.YT](http://18.YT)', '18.YT')
-        lines.append(line)
-    cookies_content = '\n'.join(lines)
-    tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False)
+    # Write raw to file
+    tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8')
     tmp.write(cookies_content)
     tmp.close()
     return tmp.name
@@ -39,6 +34,12 @@ def get_ydl_opts(extra={}):
         'quiet': True,
         'no_warnings': True,
         'socket_timeout': 30,
+        # Use Android client - most reliable bypass
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android_creator'],
+            }
+        },
     }
     cookie_file = write_cookies()
     if cookie_file:
@@ -74,39 +75,28 @@ def download():
     if not url: return jsonify({'error':'No URL'}), 400
 
     try:
-        # Get the direct video URL and redirect to it
-        # This avoids downloading through the server
         if fmt == 'mp3':
             fmt_str = 'bestaudio/best'
         else:
             fmt_str = 'best[ext=mp4]/best' if quality in ('max','auto') else f'best[height<={quality}][ext=mp4]/best[height<={quality}]'
 
-        opts = get_ydl_opts({
-            'skip_download': True,
-            'format': fmt_str,
-        })
+        opts = get_ydl_opts({'skip_download': True, 'format': fmt_str})
 
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=False)
-            
-            # Get the direct URL
+
             if 'url' in info:
                 direct_url = info['url']
             elif 'formats' in info:
-                formats = info['formats']
-                # Pick best mp4 format
-                mp4_formats = [f for f in formats if f.get('ext') == 'mp4' and f.get('url')]
-                if mp4_formats:
-                    direct_url = mp4_formats[-1]['url']
-                else:
-                    direct_url = formats[-1]['url']
+                formats = [f for f in info['formats'] if f.get('url')]
+                mp4 = [f for f in formats if f.get('ext') == 'mp4']
+                direct_url = (mp4 or formats)[-1]['url']
             else:
-                return jsonify({'error': 'No download URL found'}), 400
+                return jsonify({'error': 'No URL found'}), 400
 
             title = info.get('title', 'video')
             safe = ''.join(c for c in title if c.isalnum() or c in ' -_').strip()[:60]
 
-            # Return the direct URL to the client
             return jsonify({
                 'direct_url': direct_url,
                 'filename': safe + '.mp4',
@@ -115,6 +105,21 @@ def download():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/debug')
+def debug():
+    """Check if cookies are loaded"""
+    cookies = os.environ.get('YOUTUBE_COOKIES', '')
+    cookie_file = write_cookies()
+    lines = 0
+    if cookie_file:
+        with open(cookie_file) as f:
+            lines = len(f.readlines())
+    return jsonify({
+        'cookies_env_length': len(cookies),
+        'cookie_file_lines': lines,
+        'first_100_chars': cookies[:100],
+    })
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
