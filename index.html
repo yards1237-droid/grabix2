@@ -413,10 +413,46 @@ function handleSignup() {
   var email    = document.getElementById('su-email').value.trim().toLowerCase();
   var password = document.getElementById('su-password').value;
   var errEl    = document.getElementById('su-error');
-  if (!username || !email || !password) { errEl.textContent = 'Please fill in all fields.'; return; }
-  if (password.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; return; }
+
+  // Check all fields filled
+  if (!username || !email || !password) {
+    errEl.textContent = 'Please fill in all fields.';
+    return;
+  }
+
+  // Validate username (min 3 chars, no spaces)
+  if (username.length < 3) {
+    errEl.textContent = 'Username must be at least 3 characters.';
+    return;
+  }
+
+  // Validate email format
+  var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  if (!emailRegex.test(email)) {
+    errEl.textContent = 'Please enter a valid email address (e.g. name@gmail.com).';
+    return;
+  }
+
+  // Validate password strength
+  if (password.length < 8) {
+    errEl.textContent = 'Password must be at least 8 characters.';
+    return;
+  }
+  if (!/[A-Z]/.test(password)) {
+    errEl.textContent = 'Password must contain at least one uppercase letter.';
+    return;
+  }
+  if (!/[0-9]/.test(password)) {
+    errEl.textContent = 'Password must contain at least one number.';
+    return;
+  }
+
   var users = getUsers();
-  if (users.find(function(u){ return u.email === email; })) { errEl.textContent = 'Account already exists.'; return; }
+  if (users.find(function(u){ return u.email === email; })) {
+    errEl.textContent = 'An account with this email already exists.';
+    return;
+  }
+
   users.push({ username: username, email: email, password: password });
   saveUsers(users);
   setSession(email);
@@ -530,10 +566,15 @@ function grabVideo() {
     dlLink.textContent = 'Download Video';
     dlLink.onclick = function(e) {
       e.preventDefault();
-      // Use cobalt.tools for all downloads - most reliable
-      // Try cobalt API first, fallback to cobalt.tools UI
-      var cobaltApi = 'https://cobalt.tools/#' + encodeURIComponent(url);
-      window.open(cobaltApi, '_blank');
+      var isYT = url.indexOf('youtube.com') !== -1 || url.indexOf('youtu.be') !== -1;
+      if (isYT) {
+        var ytDlUrl = url.replace('https://www.youtube.com', 'https://www.ssyoutube.com')
+                        .replace('https://youtube.com', 'https://ssyoutube.com')
+                        .replace('https://youtu.be/', 'https://ssyoutube.com/watch?v=');
+        window.open(ytDlUrl, '_blank');
+      } else {
+        window.open('https://cobalt.tools/#' + encodeURIComponent(url), '_blank');
+      }
     };
 
     resultEl.classList.remove('hidden');
@@ -560,9 +601,15 @@ function grabVideo() {
     dlLink.textContent = 'Download Video';
     dlLink.onclick = function(e) {
       e.preventDefault();
-      // Try cobalt API first, fallback to cobalt.tools UI
-      var cobaltApi = 'https://cobalt.tools/#' + encodeURIComponent(url);
-      window.open(cobaltApi, '_blank');
+      var isYT = url.indexOf('youtube.com') !== -1 || url.indexOf('youtu.be') !== -1;
+      if (isYT) {
+        var ytDlUrl = url.replace('https://www.youtube.com', 'https://www.ssyoutube.com')
+                        .replace('https://youtube.com', 'https://ssyoutube.com')
+                        .replace('https://youtu.be/', 'https://ssyoutube.com/watch?v=');
+        window.open(ytDlUrl, '_blank');
+      } else {
+        window.open('https://cobalt.tools/#' + encodeURIComponent(url), '_blank');
+      }
     };
 
     resultEl.classList.remove('hidden');
