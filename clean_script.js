@@ -210,8 +210,7 @@ function grabVideo() {
       e.preventDefault();
       var isYT = url.indexOf('youtube.com') !== -1 || url.indexOf('youtu.be') !== -1;
       if (isYT) {
-        // Use cobalt.tools - clean, no ads, open source
-        window.open('https://cobalt.tools/#' + encodeURIComponent(url), '_blank');
+        window.open('https://loader.to/en//' + encodeURIComponent(url), '_blank');
       } else {
         window.open('https://cobalt.tools/#' + encodeURIComponent(url), '_blank');
       }
@@ -243,8 +242,7 @@ function grabVideo() {
       e.preventDefault();
       var isYT = url.indexOf('youtube.com') !== -1 || url.indexOf('youtu.be') !== -1;
       if (isYT) {
-        // Use cobalt.tools - clean, no ads, open source
-        window.open('https://cobalt.tools/#' + encodeURIComponent(url), '_blank');
+        window.open('https://loader.to/en//' + encodeURIComponent(url), '_blank');
       } else {
         window.open('https://cobalt.tools/#' + encodeURIComponent(url), '_blank');
       }
