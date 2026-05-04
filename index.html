@@ -8,7 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js" crossorigin="anonymous"></script>
   <style>
 /* ================================================================
-   GRABIX – style.css  (Online Video Downloader Edition)
+   GRABIFY – style.css  (Online Video Downloader Edition)
 ================================================================ */
 :root {
   --bg:        #0a0b0f;
@@ -216,7 +216,7 @@ input,textarea,button,select{font-family:inherit;}
   <!-- AUTH -->
   <div id="authOverlay" class="auth-overlay">
     <div id="signupCard" class="auth-card active">
-      <div class="auth-logo">Grabix</div>
+      <div class="auth-logo">Grabify</div>
       <h2>Create Account</h2>
       <p class="auth-sub">Download any video from anywhere</p>
       <div class="input-group"><span class="input-icon">&#128100;</span><input type="text" id="su-username" placeholder="Username" autocomplete="off"/></div>
@@ -227,7 +227,7 @@ input,textarea,button,select{font-family:inherit;}
       <p class="auth-switch">Already have an account? <a onclick="showLogin()">Log In</a></p>
     </div>
     <div id="loginCard" class="auth-card">
-      <div class="auth-logo">Grabix</div>
+      <div class="auth-logo">Grabify</div>
       <h2>Welcome Back</h2>
       <p class="auth-sub">Sign in to start downloading</p>
       <div class="input-group"><span class="input-icon">&#9993;</span><input type="email" id="li-email" placeholder="Email" autocomplete="off"/></div>
@@ -241,7 +241,7 @@ input,textarea,button,select{font-family:inherit;}
   <!-- MAIN APP -->
   <div id="mainApp" class="hidden">
     <nav class="navbar">
-      <div class="nav-logo">Grabix</div>
+      <div class="nav-logo">Grabify</div>
       <button class="hamburger" id="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></button>
       <ul class="nav-links" id="navLinks">
         <li><a class="nav-link active" onclick="navigate('home')">Home</a></li>
@@ -329,10 +329,10 @@ input,textarea,button,select{font-family:inherit;}
       <div class="section-inner">
         <h2 class="section-title">About Us</h2>
         <div class="about-grid">
-          <div class="about-card"><span class="about-icon">&#128640;</span><h3>Lightning Fast</h3><p>Grabix fetches your video directly from the source &mdash; no waiting, no queues.</p></div>
+          <div class="about-card"><span class="about-icon">&#128640;</span><h3>Lightning Fast</h3><p>Grabify fetches your video directly from the source &mdash; no waiting, no queues.</p></div>
           <div class="about-card"><span class="about-icon">&#128272;</span><h3>Private &amp; Secure</h3><p>We never store your URLs or downloaded files.</p></div>
           <div class="about-card"><span class="about-icon">&#127757;</span><h3>1000+ Sites</h3><p>TikTok, Twitter/X, Instagram, Facebook, Vimeo, Reddit and more.</p></div>
-          <div class="about-card full-width"><span class="about-icon">&#128161;</span><h3>Our Story</h3><p>Grabix was built with one mission: make saving videos effortless. No installs, no ads, no bloat &mdash; just paste a link and get your video.</p></div>
+          <div class="about-card full-width"><span class="about-icon">&#128161;</span><h3>Our Story</h3><p>Grabify was built with one mission: make saving videos effortless. No installs, no ads, no bloat &mdash; just paste a link and get your video.</p></div>
         </div>
       </div>
     </section>
@@ -348,14 +348,14 @@ input,textarea,button,select{font-family:inherit;}
           <div class="input-group textarea-group"><span class="input-icon top">&#128172;</span><textarea id="c-msg" placeholder="Your message..." rows="5"></textarea></div>
           <div id="contact-error" class="auth-error"></div>
           <button class="btn-primary" onclick="submitContact()">Send Message</button>
-          <div id="contact-success" class="success-msg hidden">&#10003; Message sent! We'll get back to you within 24 hours.</div>
+          <div id="contact-success" class="success-msg hidden">&#10003; Message sent! We'll get back to you soon.</div>
         </div>
       </div>
     </section>
   </div>
 
   <script>
-/* GRABIX - script.js */
+/* GRABIFY - script.js */
 
 document.addEventListener('DOMContentLoaded', function() {
   initParticles();
@@ -368,24 +368,24 @@ var _memUsers = [];
 var _memSession = false;
 
 function getUsers() {
-  try { return JSON.parse(localStorage.getItem('grabix_users') || '[]'); }
+  try { return JSON.parse(localStorage.getItem('grabify_users') || '[]'); }
   catch(e) { return _memUsers; }
 }
 function saveUsers(u) {
   _memUsers = u;
-  try { localStorage.setItem('grabix_users', JSON.stringify(u)); } catch(e) {}
+  try { localStorage.setItem('grabify_users', JSON.stringify(u)); } catch(e) {}
 }
 function setSession(email) {
   _memSession = email;
-  try { localStorage.setItem('grabix_session', email); } catch(e) {}
+  try { localStorage.setItem('grabify_session', email); } catch(e) {}
 }
 function getSession() {
   if (_memSession) return _memSession;
-  try { return localStorage.getItem('grabix_session'); } catch(e) { return null; }
+  try { return localStorage.getItem('grabify_session'); } catch(e) { return null; }
 }
 function clearSession() {
   _memSession = false;
-  try { localStorage.removeItem('grabix_session'); } catch(e) {}
+  try { localStorage.removeItem('grabify_session'); } catch(e) {}
 }
 
 function checkSession() {
